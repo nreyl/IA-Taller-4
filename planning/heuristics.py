@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from planning.pddl import ActionSchema, State, Objects, get_applicable_actions
 from planning.pddl import ActionSchema, State, Objects
 
 
@@ -79,5 +79,25 @@ def ignoreDeleteListsHeuristic(
          each step (preconditions still apply in the relaxed model).
     """
     ### Your code here ###
+    actual = state
+    costo = 0
 
+    while not goal.issubset(actual):
+        faltantes = goal - actual
+        acciones = get_applicable_actions(actual, domain, objects)
+        mejor = None
+        mejor_ganancia = 0
+
+        for accion in acciones:
+            ganancia = len(accion.add_list & faltantes)
+            if ganancia > mejor_ganancia:
+                mejor = accion
+                mejor_ganancia = ganancia
+
+        if mejor is None:
+            return float("inf")
+        actual = frozenset(actual | mejor.add_list)
+        costo += 1
+
+    return costo
     ### End of your code ###

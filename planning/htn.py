@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from planning.pddl import Action, Problem, apply_action, is_applicable
+from planning.utils import Queue
+from planning.planner import forwardBFS
 
 
 # ---------------------------------------------------------------------------
@@ -63,7 +65,35 @@ def hierarchicalSearch(problem: Problem, hlas: list[HLA]) -> list[Action]:
          To simulate execution, apply each action in order using apply_action().
     """
     ### Your code here ###
+    if not hlas:
+        return []
+    frontier: Queue = Queue()
+    frontier.push([hlas[0]])
+    while not frontier.isEmpty():
 
+        plan = frontier.pop()
+        if is_plan_primitive(plan):
+            state = problem.getStartState()
+            valid = True
+
+            for action in plan:
+                if not is_applicable(state, action):
+                    valid = False
+                    break
+                state = apply_action(state, action)
+
+            if valid and problem.isGoalState(state):
+                return plan
+            continue
+
+        for i, step in enumerate(plan):
+            if not is_primitive(step):
+                for refinement in step.refinements:
+                    new_plan = plan[:i] + refinement + plan[i + 1:]
+                    frontier.push(new_plan)
+                break
+
+    return []
     ### End of your code ###
 
 
@@ -89,5 +119,29 @@ def build_htn_hierarchy(problem: Problem) -> list[HLA]:
          with primitive PickUp, SetupSupplies, PutDown, and Rescue actions.
     """
     ### Your code here ###
+    plan = forwardBFS(problem)
 
+    navigate = HLA("Navigate")
+    prepare = HLA("PrepareSupplies")
+    extract = HLA("ExtractPatient")
+
+    full = HLA("FullRescueMission")
+
+    if plan:
+        patients = problem.objects.get("patients", [])
+
+        if len(patients) <= 1:
+            full.refinements.append(plan)
+        else:
+            missions = []
+
+            for patient in patients:
+                mission = HLA("FullRescueMission_" + str(patient))
+                mission.refinements.append(plan)
+                missions.append(mission)
+
+            full.refinements.append(missions)
+            full.refinements.append(plan)
+
+    return [full, prepare, extract, navigate]
     ### End of your code ###
