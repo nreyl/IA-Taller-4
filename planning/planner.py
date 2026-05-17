@@ -183,6 +183,20 @@ def regress(goal_set: State, action: Action) -> State | None:
     """
     ### Your code here ###
 
+    if not (action.add_list & goal_set):
+        return None
+
+    if action.del_list & goal_set:
+        return None
+    
+
+    new_goal = frozenset((goal_set - action.add_list) | action.precond_pos)
+    
+    if action.precond_neg & new_goal:
+        return None
+
+    return new_goal
+
     ### End of your code ###
 
 
@@ -205,7 +219,51 @@ def backwardSearch(problem: Problem) -> list[Action]:
          Pickable) that are false in the initial state — these are dead ends.
     """
     ### Your code here ###
+    goal = problem.goal
+    start = problem.getStartState()
 
+    frontier = PriorityQueue()
+    frontier.push((goal, []), len(goal))
+    explored = set()
+    all_actions = get_all_groundings(problem.domain, problem.objects)
+    
+    print("LEN OF ALL ACTIONS: " + str(len(all_actions)) )
+
+    static_predicates = {"MedicalPost", "Adjacent", "Pickable"}
+
+    while not frontier.isEmpty():
+        current_goal, rev_plan = frontier.pop()
+        
+        if current_goal in explored:
+            continue
+        explored.add(current_goal)
+        
+        if current_goal.issubset(start):
+            return list(reversed(rev_plan))
+
+        unsatisfied = current_goal - start
+
+        for action in all_actions:
+            if action.add_list.isdisjoint(unsatisfied):
+                continue
+
+            new_goal = regress(current_goal, action)
+            if new_goal is None:
+                continue
+
+            dead_end = any(
+                fluent[0] in static_predicates and fluent not in start
+                for fluent in new_goal
+            )
+            if dead_end:
+                continue
+
+            priority = len(new_goal - start)  # fluents aún no satisfechos
+            if new_goal not in explored:
+                frontier.push((new_goal, rev_plan + [action]), priority)
+
+    return []
+        
     ### End of your code ###
 
 
