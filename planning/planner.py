@@ -190,7 +190,7 @@ def regress(goal_set: State, action: Action) -> State | None:
         return None
     
 
-    new_goal = (goal_set - action.add_list) | action.precond_pos
+    new_goal = frozenset((goal_set - action.add_list) | action.precond_pos)
     
     if action.precond_neg & new_goal:
         return None
@@ -222,52 +222,45 @@ def backwardSearch(problem: Problem) -> list[Action]:
     goal = problem.goal
     start = problem.getStartState()
 
-    frontier: Queue = Queue()
-    frontier.push((goal, []))
+    frontier = PriorityQueue()
+    frontier.push((goal, []), len(goal))
     explored = set()
     all_actions = get_all_groundings(problem.domain, problem.objects)
+    
+    print("LEN OF ALL ACTIONS: " + str(len(all_actions)) )
 
     static_predicates = {"MedicalPost", "Adjacent", "Pickable"}
 
     while not frontier.isEmpty():
-
         current_goal, rev_plan = frontier.pop()
         
         if current_goal in explored:
             continue
-
         explored.add(current_goal)
         
-        if current_goal.issubset(start) :
+        if current_goal.issubset(start):
             return list(reversed(rev_plan))
 
         unsatisfied = current_goal - start
 
         for action in all_actions:
-
-            # Acción relevante
             if action.add_list.isdisjoint(unsatisfied):
                 continue
 
             new_goal = regress(current_goal, action)
-
             if new_goal is None:
                 continue
-            
-            for fluent in new_goal:
-                print(fluent[0])
-            
+
             dead_end = any(
                 fluent[0] in static_predicates and fluent not in start
                 for fluent in new_goal
             )
-
             if dead_end:
                 continue
-                
-                
-            frontier.push((new_goal, rev_plan + [action]))
-            
+
+            priority = len(new_goal - start)  # fluents aún no satisfechos
+            if new_goal not in explored:
+                frontier.push((new_goal, rev_plan + [action]), priority)
 
     return []
         
