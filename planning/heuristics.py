@@ -45,7 +45,27 @@ def ignorePreconditionsHeuristic(
          Remember: with no preconditions, every grounding is "applicable".
     """
     ### Your code here ###
-
+    actual = state
+    used_actions = 0
+    actions = get_applicable_actions(state, domain, objects)
+    
+    while not goal.issubset(actual):
+        unsatisfied = goal - actual
+        most_fluents_met = 0
+        best = None
+        
+        for action in actions:
+            fluents_met = len(action.add_list & unsatisfied)
+            if fluents_met > most_fluents_met:
+                most_fluents_met = fluents_met
+                best = action
+        
+        if best is None:
+            return float("inf")
+        
+        actual = actual | best.add_list        
+        used_actions +=1
+    return used_actions
     ### End of your code ###
 
 
