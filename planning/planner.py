@@ -226,8 +226,6 @@ def backwardSearch(problem: Problem) -> list[Action]:
     frontier.push((goal, []), len(goal))
     explored = set()
     all_actions = get_all_groundings(problem.domain, problem.objects)
-    
-    print("LEN OF ALL ACTIONS: " + str(len(all_actions)) )
 
     static_predicates = {"MedicalPost", "Adjacent", "Pickable"}
 
@@ -263,8 +261,63 @@ def backwardSearch(problem: Problem) -> list[Action]:
                 frontier.push((new_goal, rev_plan + [action]), priority)
 
     return []
-        
+
     ### End of your code ###
+
+
+# ---------------------------------------------------------------------------
+# REGISTRO DE USO DE IA (Política del Taller 4)
+# ---------------------------------------------------------------------------
+# Se utilizó un agente de IA durante la depuración de backwardSearch porque
+# la versión inicial no terminaba (divergía en mediumRescue/cornerRescue).
+#
+# (1) VERSIÓN INICIAL (autoría propia, antes de IA):
+#
+#   def backwardSearch(problem):
+#       goal = problem.goal
+#       start = problem.getStartState()
+#       frontier = Queue()
+#       frontier.push((goal, []))
+#       explored = set()
+#       all_actions = get_all_groundings(problem.domain, problem.objects)
+#       while not frontier.isEmpty():
+#           current_goal, rev_plan = frontier.pop()
+#           if current_goal in explored:
+#               continue
+#           explored.add(current_goal)
+#           if current_goal.issubset(start):
+#               return list(reversed(rev_plan))
+#           for action in all_actions:
+#               new_goal = regress(current_goal, action)
+#               if new_goal is None:
+#                   continue
+#               if new_goal not in explored:
+#                   frontier.push((new_goal, rev_plan + [action]))
+#       return []
+#
+#   Problema observado: el algoritmo no terminaba. Los subobjetivos generados
+#   contenían fluentes estáticos como ("MedicalPost", celda) para celdas que
+#   no eran puestos médicos, generando ramas infinitas que nunca podrían
+#   satisfacerse por el estado inicial.
+#
+# (2) PROMPT USADO:
+#   "Mi backwardSearch para PDDL no termina en cornerRescue. Genera subobjetivos
+#    que requieren MedicalPost en celdas que no lo son. ¿Cómo podo subobjetivos
+#    que contienen predicados estáticos imposibles, y cómo priorizo la frontera
+#    para no expandir en BFS puro?"
+#
+# (3) VERSIÓN FINAL (arriba): se aplicaron tres ajustes sugeridos por la IA y
+#   validados por el grupo:
+#     - Poda de predicados estáticos (MedicalPost, Adjacent, Pickable) que no
+#       están en el estado inicial.
+#     - Filtro de relevancia: action.add_list.isdisjoint(unsatisfied) antes de
+#       llamar a regress, para evitar trabajo inútil.
+#     - PriorityQueue con prioridad = |new_goal - start| (cantidad de fluentes
+#       aún no satisfechos), para priorizar subobjetivos más cercanos al inicial.
+#
+# El resto del archivo (forwardBFS, regress, aStarPlanner) es de autoría propia
+# sin asistencia de IA.
+# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
